@@ -12,6 +12,54 @@ export const useTTS = () => {
     const voices = ref<Record<string, any>>({});
     let kokoro: KokoroTTS | null = null;
     let currentAudio: HTMLAudioElement | null = null;
+    const messageQueue: string[] = [];
+    let isProcessingQueue = false;
+
+    const processQueue = async () => {
+        if (isProcessingQueue || messageQueue.length === 0) return;
+        
+        isProcessingQueue = true;
+        
+        while (messageQueue.length > 0) {
+            const text = messageQueue.shift();
+            if (!text || !settings.ttsEnabled.value) continue;
+            
+            if (!isEngineReady.value || !kokoro) {
+                console.log('[TTS] Engine not ready, skipping message');
+                continue;
+            }
+
+            try {
+                const audioResult = await kokoro.generate(text, {
+                    voice: settings.selectedVoice.value || 'af_sarah',
+                });
+
+                if (!audioResult) continue;
+
+                const blob = audioResult.toBlob();
+                const url = URL.createObjectURL(blob);
+                
+                currentAudio = new Audio(url);
+                currentAudio.volume = settings.ttsVolume.value || 1;
+                
+                await currentAudio.play();
+                
+                await new Promise<void>((resolve) => {
+                    currentAudio!.onended = () => {
+                        if (currentAudio) {
+                            URL.revokeObjectURL(currentAudio.src);
+                            currentAudio = null;
+                        }
+                        resolve();
+                    };
+                });
+            } catch (e: any) {
+                console.error('[TTS] Error playing:', e);
+            }
+        }
+        
+        isProcessingQueue = false;
+    };
 
     const initEngine = async () => {
         if (typeof window === 'undefined') return;
@@ -30,6 +78,11 @@ export const useTTS = () => {
             isSupported.value = true;
             voices.value = kokoro.voices;
             console.log('[TTS] Kokoro engine ready, voices:', Object.keys(voices.value));
+            
+            if (messageQueue.length > 0) {
+                console.log('[TTS] Processing queued messages...');
+                processQueue();
+            }
         } catch (e: any) {
             console.error('[TTS] Kokoro init failed:', e);
             engineError.value = e.message || 'Failed to load TTS engine';
@@ -54,44 +107,16 @@ export const useTTS = () => {
         }
 
         if (!isEngineReady.value || !kokoro) {
-            console.log('[TTS] Engine not ready yet, please wait...');
+            console.log('[TTS] Engine not ready yet, queuing message...');
+            messageQueue.push(text);
             return;
         }
 
-        console.log('[TTS] Speaking:', text, 'with voice:', settings.selectedVoice.value);
-
-        try {
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
-            }
-
-            const audioResult = await kokoro.generate(text, {
-                voice: settings.selectedVoice.value || 'af_sarah',
-            });
-
-            if (!audioResult) {
-                console.error('[TTS] No audio generated');
-                return;
-            }
-
-            const blob = audioResult.toBlob();
-            const url = URL.createObjectURL(blob);
-            
-            currentAudio = new Audio(url);
-            currentAudio.volume = settings.ttsVolume.value || 1;
-            
-            await currentAudio.play();
-            
-            currentAudio.onended = () => {
-                if (currentAudio) {
-                    URL.revokeObjectURL(currentAudio.src);
-                    currentAudio = null;
-                }
-            };
-        } catch (e: any) {
-            console.error('[TTS] Error:', e);
-        }
+        console.log('[TTS] Queuing:', text);
+        
+        messageQueue.push(text);
+        
+        processQueue();
     };
 
     const stop = () => {
@@ -99,6 +124,8 @@ export const useTTS = () => {
             currentAudio.pause();
             currentAudio = null;
         }
+        messageQueue.length = 0;
+        isProcessingQueue = false;
     };
 
     return {

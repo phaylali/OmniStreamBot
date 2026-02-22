@@ -125,7 +125,7 @@ const handleMessage = (msg: ChatMessage) => {
     }
   });
 
-  // Trigger TTS
+  // Trigger TTS (non-blocking)
   tts.speak(`${msg.username} says: ${msg.message}`);
 };
 
