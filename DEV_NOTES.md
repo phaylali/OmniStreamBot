@@ -71,6 +71,8 @@ OmniStreamBot/
 - No external APIs, no internet required after first load
 - First run downloads ~93MB model, then caches locally
 
+**Important**: The TTS model is lazy-loaded. Users must click "Initiate & Test" at least once to load the model before chat messages will be spoken. Voice changes require a browser tab reload to take effect.
+
 **Implementation**: `app/composables/useTTS.ts`
 
 ```typescript
@@ -141,7 +143,9 @@ bun run preview
 
 ### TTS not working
 - Check browser console for `[TTS]` logs
+- **Must click "Initiate & Test"** button at least once to load the TTS model before chat messages will be spoken
 - First run requires internet to download the model (~93MB)
+- After changing voice, reload the browser tab for the new voice to take effect
 - Ensure browser has WebAssembly support
 
 ### Kick not connecting

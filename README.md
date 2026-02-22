@@ -44,9 +44,11 @@ The output will be in the `.output/` directory.
 1. Enter your **Twitch username** in the settings panel
 2. Enter your **Kick username** (if monitoring Kick chat)
 3. Toggle **TTS** on/off as needed
-4. Adjust volume with the slider
+4. Select a voice and adjust volume
+5. **Click "Initiate & Test"** - This loads the TTS model (~93MB first time) and enables TTS for chat messages
+6. The chat will automatically connect and display messages from both platforms in real-time
 
-The chat will automatically connect and display messages from both platforms in real-time.
+> **Important**: You must click "Initiate & Test" at least once before chat messages will be spoken. The TTS model needs to be loaded first. After changing voices, reload the browser tab for the new voice to take effect.
 
 ## Tech Stack
 

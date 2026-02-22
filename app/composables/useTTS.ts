@@ -9,6 +9,7 @@ export const useTTS = () => {
     const isLoading = ref(false);
     const isEngineReady = ref(false);
     const engineError = ref<string | null>(null);
+    const voices = ref<Record<string, any>>({});
     let kokoro: KokoroTTS | null = null;
     let currentAudio: HTMLAudioElement | null = null;
 
@@ -27,7 +28,8 @@ export const useTTS = () => {
             });
             isEngineReady.value = true;
             isSupported.value = true;
-            console.log('[TTS] Kokoro engine ready');
+            voices.value = kokoro.voices;
+            console.log('[TTS] Kokoro engine ready, voices:', Object.keys(voices.value));
         } catch (e: any) {
             console.error('[TTS] Kokoro init failed:', e);
             engineError.value = e.message || 'Failed to load TTS engine';
@@ -56,7 +58,7 @@ export const useTTS = () => {
             return;
         }
 
-        console.log('[TTS] Speaking:', text);
+        console.log('[TTS] Speaking:', text, 'with voice:', settings.selectedVoice.value);
 
         try {
             if (currentAudio) {
@@ -65,7 +67,7 @@ export const useTTS = () => {
             }
 
             const audioResult = await kokoro.generate(text, {
-                voice: 'af_sarah',
+                voice: settings.selectedVoice.value || 'af_sarah',
             });
 
             if (!audioResult) {
@@ -104,6 +106,7 @@ export const useTTS = () => {
         isLoading,
         isEngineReady,
         engineError,
+        voices,
         speak,
         stop,
     };

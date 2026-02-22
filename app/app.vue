@@ -71,13 +71,23 @@
 
           <div v-if="settings.ttsEnabled.value" class="space-y-4">
             <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300">Voice</label>
+              <select v-model="settings.selectedVoice.value" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-purple-500 transition-colors">
+                <option v-for="(voice, key) in tts.voices.value" :key="key" :value="key">
+                  {{ voice.name }}
+                </option>
+              </select>
+              <p class="text-xs text-gray-500">Reload tab after changing voice for it to take effect</p>
+            </div>
+
+            <div class="space-y-2">
               <label class="block text-sm font-medium text-gray-300">Volume ({{ Math.round((settings.ttsVolume.value || 1) * 100) }}%)</label>
               <input v-model.number="settings.ttsVolume.value" type="range" min="0" max="1" step="0.05" class="w-full accent-purple-500" />
             </div>
 
             <button @click="tts.speak('Test message from OmniStreamBot!')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm flex items-center justify-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
-              Test Voice
+              Initiate & Test
             </button>
           </div>
         </div>
