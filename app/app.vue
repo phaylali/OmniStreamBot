@@ -91,6 +91,57 @@
             </button>
           </div>
         </div>
+
+        <div class="space-y-4 pt-4 border-t border-gray-700">
+          <div class="space-y-2">
+            <label class="block text-sm font-medium text-gray-300">Add to List</label>
+            <div class="flex gap-2">
+              <input v-model="newUsername" type="text" class="flex-1 bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm focus:outline-none focus:border-purple-500" placeholder="username" />
+              <select v-model="newPlatform" class="bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm focus:outline-none focus:border-purple-500">
+                <option value="twitch">Twitch</option>
+                <option value="kick">Kick</option>
+              </select>
+              <button @click="addToList('blocklist')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm transition-colors">Block</button>
+              <button @click="addToList('allowlist')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors">Allow</button>
+            </div>
+          </div>
+
+          <div class="bg-gray-700/50 rounded-lg p-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-300">Blocklist</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" v-model="settings.blocklistEnabled.value" @change="handleListToggle('blocklist')" class="sr-only peer">
+                <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
+              </label>
+            </div>
+            <div class="flex flex-wrap gap-1.5 min-h-[24px]">
+              <span v-if="settings.blocklist.value.length === 0" class="text-xs text-gray-500 italic">No users blocked</span>
+              <span v-for="(entry, index) in settings.blocklist.value" :key="'block-'+index" class="inline-flex items-center gap-1 bg-red-900/40 text-red-300 text-xs px-2 py-1 rounded-full border border-red-700/50">
+                <span class="w-2 h-2 rounded-full" :class="entry.platform === 'twitch' ? 'bg-purple-500' : 'bg-green-500'"></span>
+                {{ entry.username }}
+                <button @click="removeFromList('blocklist', index)" class="ml-1 hover:text-red-200">&times;</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="bg-gray-700/50 rounded-lg p-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-300">Allowlist</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" v-model="settings.allowlistEnabled.value" @change="handleListToggle('allowlist')" class="sr-only peer">
+                <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+              </label>
+            </div>
+            <div class="flex flex-wrap gap-1.5 min-h-[24px]">
+              <span v-if="settings.allowlist.value.length === 0" class="text-xs text-gray-500 italic">No users allowed</span>
+              <span v-for="(entry, index) in settings.allowlist.value" :key="'allow-'+index" class="inline-flex items-center gap-1 bg-green-900/40 text-green-300 text-xs px-2 py-1 rounded-full border border-green-700/50">
+                <span class="w-2 h-2 rounded-full" :class="entry.platform === 'twitch' ? 'bg-purple-500' : 'bg-green-500'"></span>
+                {{ entry.username }}
+                <button @click="removeFromList('allowlist', index)" class="ml-1 hover:text-green-200">&times;</button>
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </aside>
   </div>
@@ -107,8 +158,44 @@ const settings = useSettings();
 const tts = useTTS();
 const messages = ref<ChatMessage[]>([]);
 const chatContainer = ref<HTMLElement | null>(null);
+const newUsername = ref('');
+const newPlatform = ref<'twitch' | 'kick'>('twitch');
 
 const maxMessages = 200;
+
+const addToList = (list: 'blocklist' | 'allowlist') => {
+  const username = newUsername.value.trim().toLowerCase();
+  if (!username) return;
+  
+  const entry = { username, platform: newPlatform.value };
+  const targetList = list === 'blocklist' ? settings.blocklist : settings.allowlist;
+  
+  const exists = targetList.value.some(
+    e => e.username.toLowerCase() === username && e.platform === newPlatform.value
+  );
+  
+  if (!exists) {
+    targetList.value.push(entry);
+  }
+  
+  newUsername.value = '';
+};
+
+const removeFromList = (list: 'blocklist' | 'allowlist', index: number) => {
+  if (list === 'blocklist') {
+    settings.blocklist.value.splice(index, 1);
+  } else {
+    settings.allowlist.value.splice(index, 1);
+  }
+};
+
+const handleListToggle = (enabledList: 'blocklist' | 'allowlist') => {
+  if (enabledList === 'blocklist' && settings.blocklistEnabled.value) {
+    settings.allowlistEnabled.value = false;
+  } else if (enabledList === 'allowlist' && settings.allowlistEnabled.value) {
+    settings.blocklistEnabled.value = false;
+  }
+};
 
 const handleMessage = (msg: ChatMessage) => {
   messages.value.push(msg);
@@ -126,7 +213,7 @@ const handleMessage = (msg: ChatMessage) => {
   });
 
   // Trigger TTS (non-blocking)
-  tts.speak(`${msg.username} says: ${msg.message}`);
+  tts.speak(`${msg.username} says: ${msg.message}`, { username: msg.username, platform: msg.platform });
 };
 
 const twitch = useTwitchChat(handleMessage);

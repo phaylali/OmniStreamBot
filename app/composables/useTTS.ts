@@ -96,7 +96,7 @@ export const useTTS = () => {
         initEngine();
     });
 
-    const speak = async (text: string) => {
+    const speak = async (text: string, params?: { username: string; platform: 'twitch' | 'kick' }) => {
         if (!isBrowser.value || !text || !settings.ttsEnabled.value) {
             console.log('[TTS] Not speaking:', { 
                 browser: isBrowser.value, 
@@ -104,6 +104,31 @@ export const useTTS = () => {
                 enabled: settings.ttsEnabled.value 
             });
             return;
+        }
+
+        if (params?.username) {
+            const username = params.username.toLowerCase();
+            const platform = params.platform;
+
+            if (settings.blocklistEnabled.value) {
+                const isBlocked = settings.blocklist.value.some(
+                    entry => entry.username.toLowerCase() === username && entry.platform === platform
+                );
+                if (isBlocked) {
+                    console.log('[TTS] Blocked by blocklist:', username);
+                    return;
+                }
+            }
+
+            if (settings.allowlistEnabled.value) {
+                const isAllowed = settings.allowlist.value.some(
+                    entry => entry.username.toLowerCase() === username && entry.platform === platform
+                );
+                if (!isAllowed) {
+                    console.log('[TTS] Not in allowlist:', username);
+                    return;
+                }
+            }
         }
 
         if (!isEngineReady.value || !kokoro) {
