@@ -10,8 +10,12 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@mintplex-labs/piper-tts-web": "^1.0.4",
+    "google-translate-api-x": "^10.7.2",
     "kokoro-js": "^1.2.1",
+    "node-edge-tts": "^1.2.10",
     "nuxt": "^4.3.1",
+    "onnxruntime-node": "^1.24.2",
     "vue": "^3.5.28",
     "vue-router": "^4.6.4"
   },

@@ -1,108 +1,36 @@
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useSettings } from './useSettings';
-import { KokoroTTS } from 'kokoro-js';
+import { createTTSFactory } from './tts';
 
 export const useTTS = () => {
     const settings = useSettings();
-    const isSupported = ref(false);
-    const isBrowser = ref(false);
-    const isLoading = ref(false);
-    const isEngineReady = ref(false);
-    const engineError = ref<string | null>(null);
-    const voices = ref<Record<string, any>>({});
-    let kokoro: KokoroTTS | null = null;
-    let currentAudio: HTMLAudioElement | null = null;
-    const messageQueue: string[] = [];
-    let isProcessingQueue = false;
+    let initialized = false;
 
-    const processQueue = async () => {
-        if (isProcessingQueue || messageQueue.length === 0) return;
-        
-        isProcessingQueue = true;
-        
-        while (messageQueue.length > 0) {
-            const text = messageQueue.shift();
-            if (!text || !settings.ttsEnabled.value) continue;
-            
-            if (!isEngineReady.value || !kokoro) {
-                console.log('[TTS] Engine not ready, skipping message');
-                continue;
-            }
+    const factory = createTTSFactory({
+        ttsEnabled: settings.ttsEnabled,
+        ttsEngine: settings.ttsEngine,
+        selectedVoice: settings.selectedVoice,
+        browserVoice: settings.browserVoice,
+        ttsVolume: settings.ttsVolume,
+        ttsRate: settings.ttsRate,
+        ttsPitch: settings.ttsPitch,
+    });
 
-            try {
-                const audioResult = await kokoro.generate(text, {
-                    voice: settings.selectedVoice.value || 'af_sarah',
-                });
-
-                if (!audioResult) continue;
-
-                const blob = audioResult.toBlob();
-                const url = URL.createObjectURL(blob);
-                
-                currentAudio = new Audio(url);
-                currentAudio.volume = settings.ttsVolume.value || 1;
-                
-                await currentAudio.play();
-                
-                await new Promise<void>((resolve) => {
-                    currentAudio!.onended = () => {
-                        if (currentAudio) {
-                            URL.revokeObjectURL(currentAudio.src);
-                            currentAudio = null;
-                        }
-                        resolve();
-                    };
-                });
-            } catch (e: any) {
-                console.error('[TTS] Error playing:', e);
-            }
+    watch(() => settings.ttsEnabled.value, (enabled) => {
+        if (!initialized) return;
+        if (enabled && !factory.isEngineReady.value) {
+            factory.init();
+        } else if (!enabled) {
+            factory.stop();
         }
-        
-        isProcessingQueue = false;
-    };
+    });
 
-    const initEngine = async () => {
-        if (typeof window === 'undefined') return;
-        
-        isBrowser.value = true;
-        isLoading.value = true;
-        engineError.value = null;
-
-        try {
-            console.log('[TTS] Loading Kokoro model...');
-            kokoro = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-ONNX', {
-                dtype: 'q8',
-                device: 'wasm',
-            });
-            isEngineReady.value = true;
-            isSupported.value = true;
-            voices.value = kokoro.voices;
-            console.log('[TTS] Kokoro engine ready, voices:', Object.keys(voices.value));
-            
-            if (messageQueue.length > 0) {
-                console.log('[TTS] Processing queued messages...');
-                processQueue();
-            }
-        } catch (e: any) {
-            console.error('[TTS] Kokoro init failed:', e);
-            engineError.value = e.message || 'Failed to load TTS engine';
-            isSupported.value = false;
-        }
-        
-        isLoading.value = false;
-    };
-
-    onMounted(() => {
-        initEngine();
+    watch(() => settings.ttsVolume.value, (volume) => {
+        factory.setVolume(volume);
     });
 
     const speak = async (text: string, params?: { username: string; platform: 'twitch' | 'kick' }) => {
-        if (!isBrowser.value || !text || !settings.ttsEnabled.value) {
-            console.log('[TTS] Not speaking:', { 
-                browser: isBrowser.value, 
-                hasText: !!text, 
-                enabled: settings.ttsEnabled.value 
-            });
+        if (!text || !settings.ttsEnabled.value) {
             return;
         }
 
@@ -131,35 +59,29 @@ export const useTTS = () => {
             }
         }
 
-        if (!isEngineReady.value || !kokoro) {
-            console.log('[TTS] Engine not ready yet, queuing message...');
-            messageQueue.push(text);
-            return;
-        }
-
-        console.log('[TTS] Queuing:', text);
-        
-        messageQueue.push(text);
-        
-        processQueue();
+        await factory.speak(text);
     };
 
     const stop = () => {
-        if (currentAudio) {
-            currentAudio.pause();
-            currentAudio = null;
-        }
-        messageQueue.length = 0;
-        isProcessingQueue = false;
+        factory.stop();
     };
 
+    onMounted(() => {
+        initialized = true;
+        if (settings.ttsEnabled.value) {
+            factory.init();
+        }
+    });
+
     return {
-        isSupported,
-        isLoading,
-        isEngineReady,
-        engineError,
-        voices,
+        isSupported: factory.isSupported,
+        isLoading: factory.isLoading,
+        isEngineReady: factory.isEngineReady,
+        engineError: factory.engineError,
+        voices: factory.voices,
+        currentEngineName: factory.currentEngineName,
         speak,
         stop,
+        switchEngine: factory.switchEngine,
     };
 };

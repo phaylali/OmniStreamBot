@@ -3,6 +3,14 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
+  future: {
+    compatibilityVersion: 4,
+  },
+  srcDir: 'app/',
+  pages: true,
+  routeRules: {
+    '/overlay': { ssr: false },
+  },
   postcss: {
     plugins: {
       tailwindcss: {},

@@ -17,6 +17,8 @@ OmniStreamBot/
 │       └── useTTS.ts          # Kokoro.js TTS engine
 ├── server/
 │   └── api/kick/[channel].ts  # Server proxy for Kick API (bypasses CORS)
+├── tts_server.py              # Local FastAPI server for Piper TTS
+├── start.sh                   # Startup script for both TTS server and Nuxt app
 ├── nuxt.config.ts             # Nuxt configuration
 ├── tailwind.config.ts         # TailwindCSS configuration
 └── package.json
@@ -50,7 +52,8 @@ OmniStreamBot/
 - Kick API is blocked server-side, so we use a CORS proxy
 - Subscribes to `chatrooms.{id}.v2` channel
 
-**Implementation**: 
+**Implementation**:
+
 - Server API: `server/api/kick/[channel].ts` - proxies API requests
 - Client: `app/composables/useKickChat.ts` - manages WebSocket
 
@@ -64,16 +67,20 @@ OmniStreamBot/
 
 ## Text-to-Speech (TTS)
 
-**Engine**: Kokoro.js (https://github.com/hexgrad/kokoro)
+**Multiple Engines Supported**:
 
-- 82M parameter neural TTS model
-- Runs 100% in-browser using ONNX Runtime with WebAssembly
-- No external APIs, no internet required after first load
-- First run downloads ~93MB model, then caches locally
+- **Server Piper**: Local FastAPI Python server (`tts_server.py`) using `piper-tts`. Highly efficient CPU synthesis.
+- **Kokoro.js**: 82M parameter neural TTS model running 100% in-browser via WebAssembly.
+- **Browser TTS**: Native `window.speechSynthesis`.
+- **Cloud TTS**: Edge and Google engines.
 
-**Important**: The TTS model is lazy-loaded. Users must click "Initiate & Test" at least once to load the model before chat messages will be spoken. Voice changes require a browser tab reload to take effect.
+**Real-time Volume**:
+All engines support dynamic real-time volume adjustment via the `TTSEngineInterface`. Modifying the slider calls `setVolume()` continuously on the actively playing HTMLAudioElement or SpeechSynthesisUtterance, scaling the volume without requiring a page or message reload.
+
+**Important**: Kokoro TTS model is lazy-loaded. Users must click "Initiate & Test" at least once to load the model before chat messages will be spoken.
 
 **Implementation**: `app/composables/useTTS.ts`
+`app/composables/tts/` contains abstract factories and implementations for each engine.
 
 ```typescript
 // Key points:
@@ -126,22 +133,25 @@ Kick's API blocks server-side requests. We use a CORS proxy (allorigins.win) to 
 ## Running Locally
 
 ```bash
-# Install dependencies
+# Recommended starting method (starts both TTS Python backend and Nuxt frontend)
+./start.sh
+
+# Or start individually:
 bun install
-
-# Development
-bun run dev
-
-# Production build
-bun run build
+bun run dev      # UI only
+.venv/bin/python tts_server.py  # Backend TTS only
+```
 
 # Preview production
+
 bun run preview
+
 ```
 
 ## Troubleshooting
 
 ### TTS not working
+
 - Check browser console for `[TTS]` logs
 - **Must click "Initiate & Test"** button at least once to load the TTS model before chat messages will be spoken
 - First run requires internet to download the model (~93MB)
@@ -149,10 +159,13 @@ bun run preview
 - Ensure browser has WebAssembly support
 
 ### Kick not connecting
+
 - Check console for `[Kick]` logs
 - The API proxy may be temporarily unavailable
 - Kick usernames are case-sensitive (stored lowercase)
 
 ### Twitch not connecting
+
 - Ensure username is correct (not display name)
 - Some channels may block anonymous chat
+```

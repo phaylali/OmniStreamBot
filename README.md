@@ -7,8 +7,9 @@ A unified chat dashboard for streamers that combines Twitch and Kick chat into a
 ## Features
 
 - **Unified Chat** - View Twitch and Kick chat in a single, merged stream
-- **Real-time TTS** - Hear chat messages spoken aloud using AI-powered neural voices
-- **Offline TTS** - Runs 100% locally in the browser using Kokoro.js - no cloud APIs required
+- **Real-time TTS** - Hear chat messages spoken aloud using AI-powered neural voices (Kokoro, Piper, Edge, etc.)
+- **Offline TTS** - Runs 100% locally using Kokoro.js in-browser or via a local Python Piper server - no cloud APIs required
+- **Real-time Volume** - Adjust audio volume dynamically on the fly while messages are playing
 - **Dark Mode** - Premium dark UI designed for streamers
 - **Persistent Settings** - Usernames and preferences saved automatically
 
@@ -20,6 +21,13 @@ A unified chat dashboard for streamers that combines Twitch and Kick chat into a
 - OR [Node.js](https://nodejs.org/) (v18+)
 
 ### Installation
+
+```bash
+# Recommended: Starts both the optional Python Piper TTS server and the Nuxt app
+./start.sh
+```
+
+Alternatively, to run just the UI without the Python TTS server:
 
 ```bash
 # Install dependencies
@@ -55,7 +63,7 @@ The output will be in the `.output/` directory.
 - **Framework**: Nuxt 4 (Vue 3)
 - **Styling**: TailwindCSS
 - **Runtime**: Bun / Node.js
-- **TTS Engine**: Kokoro.js (ONNX-based neural TTS)
+- **TTS Engines**: Kokoro.js (Browser-based ONNX), Piper TTS (Local Python FastAPI), Edge TTS, Google
 - **Chat**: WebSocket connections to Twitch IRC and Kick Pusher
 
 ## License
