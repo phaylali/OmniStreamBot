@@ -47,10 +47,45 @@
             >
               {{ msg.platform }}
             </span>
-            <span class="font-bold cursor-pointer" :style="{ color: msg.color }">{{ msg.username }}</span>
+            <span 
+              class="font-bold cursor-pointer hover:underline" 
+              :style="{ color: msg.color }"
+              @click="showUserPopup($event, msg.username, msg.platform)"
+            >
+              {{ msg.username }}
+            </span>
             <span class="text-xs text-gray-500">{{ new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span>
           </div>
           <p class="text-gray-100 text-sm leading-relaxed whitespace-pre-wrap break-words">{{ msg.message }}</p>
+        </div>
+      </div>
+
+      <!-- User Action Popup -->
+      <div 
+        v-if="activeUserPopup" 
+        class="fixed z-50 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl p-3 min-w-[160px] animate-fade-in"
+        :style="{ left: activeUserPopup.x + 'px', top: (activeUserPopup.y + 10) + 'px' }"
+        @click.stop
+      >
+        <div class="flex items-center justify-between mb-3 border-b border-gray-700 pb-2">
+          <span class="text-xs font-bold truncate pr-2" :class="activeUserPopup.platform === 'twitch' ? 'text-purple-400' : 'text-green-400'">
+            {{ activeUserPopup.username }}
+          </span>
+          <button @click="closeUserPopup" class="text-gray-500 hover:text-gray-300">&times;</button>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button 
+            @click="addToList('blocklist', activeUserPopup.username, activeUserPopup.platform)"
+            class="w-full text-left px-2 py-1.5 text-xs bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded transition-colors flex items-center gap-2"
+          >
+            <span class="w-2 h-2 rounded-full bg-red-500"></span> Block User
+          </button>
+          <button 
+            @click="addToList('allowlist', activeUserPopup.username, activeUserPopup.platform)"
+            class="w-full text-left px-2 py-1.5 text-xs bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded transition-colors flex items-center gap-2"
+          >
+            <span class="w-2 h-2 rounded-full bg-green-500"></span> Allow User
+          </button>
         </div>
       </div>
 
@@ -273,7 +308,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useSettings } from '~/composables/useSettings';
 import { useTTS } from '~/composables/useTTS';
 import { useTwitchChat, type ChatMessage } from '~/composables/useTwitchChat';
@@ -290,6 +325,27 @@ const newPlatform = ref<'twitch' | 'kick'>('twitch');
 const overlayCopied = ref(false);
 const ipCopied = ref(false);
 const localIP = ref('');
+
+const activeUserPopup = ref<{
+  username: string;
+  platform: 'twitch' | 'kick';
+  x: number;
+  y: number;
+} | null>(null);
+
+const showUserPopup = (event: MouseEvent, username: string, platform: 'twitch' | 'kick') => {
+  event.stopPropagation();
+  activeUserPopup.value = {
+    username,
+    platform,
+    x: event.clientX,
+    y: event.clientY
+  };
+};
+
+const closeUserPopup = () => {
+  activeUserPopup.value = null;
+};
 
 const getLocalIP = async () => {
   try {
@@ -335,22 +391,27 @@ const copyIPAddress = async () => {
 
 const maxMessages = 200;
 
-const addToList = (list: 'blocklist' | 'allowlist') => {
-  const username = newUsername.value.trim().toLowerCase();
+const addToList = (list: 'blocklist' | 'allowlist', usernameInput?: string, platformInput?: 'twitch' | 'kick') => {
+  const username = (usernameInput || newUsername.value).trim().toLowerCase();
   if (!username) return;
   
-  const entry = { username, platform: newPlatform.value };
+  const platform = platformInput || newPlatform.value;
+  const entry = { username, platform };
   const targetList = list === 'blocklist' ? settings.blocklist : settings.allowlist;
   
   const exists = targetList.value.some(
-    e => e.username.toLowerCase() === username && e.platform === newPlatform.value
+    e => e.username.toLowerCase() === username && e.platform === platform
   );
   
   if (!exists) {
     targetList.value.push(entry);
   }
   
-  newUsername.value = '';
+  if (!usernameInput) {
+    newUsername.value = '';
+  } else {
+    closeUserPopup();
+  }
 };
 
 const removeFromList = (list: 'blocklist' | 'allowlist', index: number) => {
@@ -419,6 +480,12 @@ onMounted(() => {
   // Auto connect if usernames exist
   if (settings.twitchUsername.value) twitch.connect();
   if (settings.kickUsername.value) kick.connect();
+
+  window.addEventListener('click', closeUserPopup);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('click', closeUserPopup);
 });
 </script>
 
