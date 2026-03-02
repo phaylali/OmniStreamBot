@@ -1,9 +1,12 @@
 import { ref, onMounted, watch } from 'vue';
 import { useSettings } from './useSettings';
 import { createTTSFactory } from './tts';
+import { useEmotes } from './useEmotes';
+import type { ChatMessage } from './useTwitchChat';
 
 export const useTTS = () => {
     const settings = useSettings();
+    const emotes = useEmotes();
     let initialized = false;
 
     const factory = createTTSFactory({
@@ -29,37 +32,38 @@ export const useTTS = () => {
         factory.setVolume(volume);
     });
 
-    const speak = async (text: string, params?: { username: string; platform: 'twitch' | 'kick' }) => {
-        if (!text || !settings.ttsEnabled.value) {
+    const speak = async (msg: ChatMessage) => {
+        if (!msg.message || !settings.ttsEnabled.value) {
             return;
         }
 
-        if (params?.username) {
-            const username = params.username.toLowerCase();
-            const platform = params.platform;
+        const username = msg.username.toLowerCase();
+        const platform = msg.platform;
 
-            if (settings.blocklistEnabled.value) {
-                const isBlocked = settings.blocklist.value.some(
-                    entry => entry.username.toLowerCase() === username && entry.platform === platform
-                );
-                if (isBlocked) {
-                    console.log('[TTS] Blocked by blocklist:', username);
-                    return;
-                }
-            }
-
-            if (settings.allowlistEnabled.value) {
-                const isAllowed = settings.allowlist.value.some(
-                    entry => entry.username.toLowerCase() === username && entry.platform === platform
-                );
-                if (!isAllowed) {
-                    console.log('[TTS] Not in allowlist:', username);
-                    return;
-                }
+        if (settings.blocklistEnabled.value) {
+            const isBlocked = settings.blocklist.value.some(
+                entry => entry.username.toLowerCase() === username && entry.platform === platform
+            );
+            if (isBlocked) {
+                console.log('[TTS] Blocked by blocklist:', username);
+                return;
             }
         }
 
-        await factory.speak(text);
+        if (settings.allowlistEnabled.value) {
+            const isAllowed = settings.allowlist.value.some(
+                entry => entry.username.toLowerCase() === username && entry.platform === platform
+            );
+            if (!isAllowed) {
+                console.log('[TTS] Not in allowlist:', username);
+                return;
+            }
+        }
+
+        const cleanText = emotes.getCleanText(msg);
+        if (cleanText) {
+            await factory.speak(`${msg.username} says: ${cleanText}`);
+        }
     };
 
     const stop = () => {

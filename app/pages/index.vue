@@ -56,7 +56,18 @@
             </span>
             <span class="text-xs text-gray-500">{{ new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span>
           </div>
-          <p class="text-gray-100 text-sm leading-relaxed whitespace-pre-wrap break-words">{{ msg.message }}</p>
+          <div class="text-gray-100 text-sm leading-relaxed whitespace-pre-wrap break-words flex flex-wrap items-center gap-x-1.5 min-h-[24px]">
+            <template v-for="(part, idx) in emotes.getMessageParts(msg)" :key="idx">
+              <span v-if="part.type === 'text'">{{ part.content }}</span>
+              <img 
+                v-else 
+                :src="part.url" 
+                :alt="part.content" 
+                :title="part.content" 
+                class="h-6 w-auto inline-block object-contain"
+              />
+            </template>
+          </div>
         </div>
       </div>
 
@@ -314,10 +325,12 @@ import { useTTS } from '~/composables/useTTS';
 import { useTwitchChat, type ChatMessage } from '~/composables/useTwitchChat';
 import { useKickChat } from '~/composables/useKickChat';
 import { useSystemInfo } from '~/composables/useSystemInfo';
+import { useEmotes } from '~/composables/useEmotes';
 
 const settings = useSettings();
 const tts = useTTS();
 const sys = useSystemInfo();
+const emotes = useEmotes();
 const messages = ref<ChatMessage[]>([]);
 const chatContainer = ref<HTMLElement | null>(null);
 const newUsername = ref('');
@@ -434,7 +447,14 @@ const testTTS = async () => {
   if (!tts.isEngineReady.value) {
     await tts.switchEngine(settings.ttsEngine.value);
   }
-  await tts.speak('Test message from OmniStreamBot!');
+  const testMsg: ChatMessage = {
+    id: 'test',
+    platform: 'twitch',
+    username: 'System',
+    message: 'Test message from OmniStreamBot!',
+    timestamp: Date.now()
+  };
+  await tts.speak(testMsg);
 };
 
 const copyOverlayLink = async () => {
@@ -467,7 +487,7 @@ const handleMessage = (msg: ChatMessage) => {
   });
 
   // Trigger TTS (non-blocking)
-  tts.speak(`${msg.username} says: ${msg.message}`, { username: msg.username, platform: msg.platform });
+  tts.speak(msg);
 };
 
 const twitch = useTwitchChat(handleMessage);

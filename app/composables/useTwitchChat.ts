@@ -8,6 +8,7 @@ export interface ChatMessage {
     message: string;
     color?: string;
     timestamp: number;
+    emotes?: string; // Twitch IRC emotes tag
 }
 
 export const useTwitchChat = (onMessage: (msg: ChatMessage) => void) => {
@@ -24,15 +25,17 @@ export const useTwitchChat = (onMessage: (msg: ChatMessage) => void) => {
             let color = '#a855f7'; // default twitch purple-ish
             let displayName = 'Unknown';
             let messageContent = '';
+            let emotes = '';
 
             // Extract tags
             const tagsMatch = raw.match(/^@([^ ]+) /);
             if (tagsMatch && tagsMatch[1]) {
-                const tags = tagsMatch[1].split(';');
-                for (const tag of tags) {
+                const tagsList = tagsMatch[1].split(';');
+                for (const tag of tagsList) {
                     const [key, value] = tag.split('=');
                     if (key === 'color' && value) color = value;
                     if (key === 'display-name' && value) displayName = value;
+                    if (key === 'emotes' && value) emotes = value;
                 }
             }
 
@@ -56,7 +59,8 @@ export const useTwitchChat = (onMessage: (msg: ChatMessage) => void) => {
                 username: displayName,
                 message: messageContent,
                 color,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                emotes
             });
         } catch (e) {
             console.error('Error parsing twitch message', e);
