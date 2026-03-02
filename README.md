@@ -7,23 +7,25 @@ A unified chat dashboard for streamers that combines Twitch and Kick chat into a
 ## Features
 
 - **Unified Chat** - View Twitch and Kick chat in a single, merged stream
-- **Real-time TTS** - Hear chat messages spoken aloud using AI-powered neural voices (Kokoro, Piper, Edge, etc.)
-- **Offline TTS** - Runs 100% locally using Kokoro.js in-browser or via a local Python Piper server - no cloud APIs required
-- **Real-time Volume** - Adjust audio volume dynamically on the fly while messages are playing
+- **Real-time TTS** - Hear chat messages spoken aloud using neural voices (Kokoro, Piper)
+- **Offline TTS** - Runs 100% locally using Kokoro.js in-browser or via a local Python Piper server
+- **Dynamic User Management** - Click any username in chat to quickly **Block** or **Allow** users via a popup card.
+- **Real-time Audio** - Adjust volume, rate, and pitch on the fly with immediate feedback - no reload required
+- **OBS Ready** - Copy your local IP and overlay link with one click for easy browser source setup
 - **Dark Mode** - Premium dark UI designed for streamers
-- **Persistent Settings** - Usernames and preferences saved automatically
+- **Persistent Settings** - Usernames, preferences, and block/allow lists saved automatically
 
 ## Getting Started
 
 ### Prerequisites
 
 - [Bun](https://bun.sh/) - Package manager and runtime (recommended)
-- OR [Node.js](https://nodejs.org/) (v18+)
+- [Python 3.10+](https://www.python.org/downloads/) - For the optional Piper TTS server
 
 ### Installation
 
 ```bash
-# Recommended: Starts both the optional Python Piper TTS server and the Nuxt app
+# Recommended: Starts both the Python Piper TTS server and the Nuxt app
 ./start.sh
 ```
 
@@ -39,32 +41,30 @@ bun run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Building for Production
-
-```bash
-bun run build
-```
-
-The output will be in the `.output/` directory.
-
 ## Usage
 
-1. Enter your **Twitch username** in the settings panel
-2. Enter your **Kick username** (if monitoring Kick chat)
-3. Toggle **TTS** on/off as needed
-4. Select a voice and adjust volume
-5. **Click "Initiate & Test"** - This loads the TTS model (~93MB first time) and enables TTS for chat messages
-6. The chat will automatically connect and display messages from both platforms in real-time
+1. Enter your **Twitch username** and/or **Kick username** in its respective settings field.
+2. Toggle **TTS** on to enable voice reading.
+3. Select a **TTS Engine**:
+   - **Browser**: Lightest, uses system voices.
+   - **Server Piper**: High quality, local Python server (requires `models/piper/` models).
+   - **Kokoro**: Premium neural quality, runs in-browser (downloads ~93MB on first use).
+4. Adjust **Volume**, **Rate**, and **Pitch** as desired. Changes take effect instantly.
+5. Click **"Initiate & Test"** to prepare the selected engine.
+6. **Community Management**: Click any name in the chat stream to open a popup card. From there, you can instantly add users to your **Allowlist** or **Blocklist**.
 
-> **Important**: You must click "Initiate & Test" at least once before chat messages will be spoken. The TTS model needs to be loaded first. After changing voices, reload the browser tab for the new voice to take effect.
+> **Note**: The first time you use Kokoro, it will download the model file. Server Piper requires `.onnx` and `.json` model files to be placed in the `models/piper/` directory.
 
 ## Tech Stack
 
 - **Framework**: Nuxt 4 (Vue 3)
-- **Styling**: TailwindCSS
-- **Runtime**: Bun / Node.js
-- **TTS Engines**: Kokoro.js (Browser-based ONNX), Piper TTS (Local Python FastAPI), Edge TTS, Google
+- **Styling**: TailwindCSS (with Dark Mode)
+- **TTS Engines**:
+  - **Kokoro.js** (In-browser ONNX runtime)
+  - **Piper TTS** (Local CPU-optimized synthesis via Python FastAPI)
+  - **Web Speech API** (Native browser voices)
 - **Chat**: WebSocket connections to Twitch IRC and Kick Pusher
+- **State Management**: Shared reactive singleton with LocalStorage persistence
 
 ## License
 
