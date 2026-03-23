@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/phaylali/Documents/Apps/OmniStreamBot/stream_engine/build/_deps/websocketpp-subbuild/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -33,7 +33,18 @@
             </span>
             <span class="font-bold text-sm" :style="{ color: msg.color }">{{ msg.username }}</span>
           </div>
-          <p class="text-xs text-white/90 whitespace-pre-wrap break-words">{{ msg.message }}</p>
+          <div class="text-[13px] text-white/90 whitespace-pre-wrap break-words flex flex-wrap items-center gap-x-1 min-h-[20px]">
+            <template v-for="(part, idx) in emotes.getMessageParts(msg)" :key="idx">
+              <span v-if="part.type === 'text'">{{ part.content }}</span>
+              <img 
+                v-else 
+                :src="part.url" 
+                :alt="part.content" 
+                :title="part.content" 
+                class="h-5 w-auto inline-block object-contain"
+              />
+            </template>
+          </div>
         </div>
       </div>
     </div>
@@ -45,8 +56,10 @@ import { ref, onMounted, nextTick, onUnmounted } from 'vue';
 import { useSettings } from '~/composables/useSettings';
 import { useTwitchChat, type ChatMessage } from '~/composables/useTwitchChat';
 import { useKickChat } from '~/composables/useKickChat';
+import { useEmotes } from '~/composables/useEmotes';
 
 const settings = useSettings();
+const emotes = useEmotes();
 const messages = ref<ChatMessage[]>([]);
 const chatContainer = ref<HTMLElement | null>(null);
 

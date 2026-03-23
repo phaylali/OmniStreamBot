@@ -99,7 +99,7 @@ export const useEmotes = () => {
             parts.push({
                 type: 'emote',
                 content: name,
-                url: `https://files.kick.com/emotes/${id}/full`
+                url: `https://files.kick.com/emotes/${id}/fullsize`
             });
 
             lastIndex = index + fullMatch.length;

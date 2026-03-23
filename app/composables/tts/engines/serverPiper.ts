@@ -12,6 +12,7 @@ export const createServerPiperEngine = (
     const localVoices = ref<Record<string, TTSVoice>>({});
 
     let currentAudio: HTMLAudioElement | null = null;
+    let singleLock: Promise<void> = Promise.resolve();
 
     const init = async () => {
         if (typeof window === 'undefined') return;
@@ -40,7 +41,13 @@ export const createServerPiperEngine = (
     };
 
     const speak = async (text: string) => {
+        const previousLock = singleLock;
+        let resolveLock: () => void;
+        singleLock = new Promise<void>((res) => { resolveLock = res; });
+
         return new Promise<void>(async (resolve) => {
+            await previousLock;
+
             try {
                 const voiceId = getVoice() || 'en_US-amy-low';
 
@@ -56,31 +63,46 @@ export const createServerPiperEngine = (
 
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
-
+                console.log(`[TTS ServerPiper] Created blob URL for text: "${text.substring(0, 20)}..."`);
+                
                 currentAudio = new Audio(url);
                 currentAudio.volume = getVolume();
 
-                await currentAudio.play();
-
                 currentAudio.onended = () => {
+                    console.log(`[TTS ServerPiper] onended fired for: "${text.substring(0, 20)}..."`);
                     if (currentAudio) {
                         URL.revokeObjectURL(currentAudio.src);
+                        currentAudio.remove(); // Remove from DOM
                         currentAudio = null;
                     }
                     resolve();
+                    resolveLock();
                 };
 
-                currentAudio.onerror = () => {
+                currentAudio.onerror = (e) => {
+                    console.error(`[TTS ServerPiper] onerror fired for: "${text.substring(0, 20)}..."`, e);
                     if (currentAudio) {
                         URL.revokeObjectURL(currentAudio.src);
+                        currentAudio.remove(); // Remove from DOM
                         currentAudio = null;
                     }
                     resolve();
+                    resolveLock();
                 };
+
+                // Append to DOM to prevent Brave browser aggressive GC/optimization
+                currentAudio.style.display = 'none';
+                document.body.appendChild(currentAudio);
+
+
+                console.log(`[TTS ServerPiper] Playing audio for: "${text.substring(0, 20)}..."`);
+                await currentAudio.play();
+                console.log(`[TTS ServerPiper] Audio play started successfully for: "${text.substring(0, 20)}..."`);
             } catch (e: any) {
                 console.error('[TTS ServerPiper] Speak error:', e);
                 error.value = 'Server TTS unavailable. Make sure Python TTS server is running.';
                 resolve();
+                resolveLock();
             }
         });
     };

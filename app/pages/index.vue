@@ -1,62 +1,45 @@
 <template>
   <div class="flex h-screen w-screen bg-gray-900 text-gray-100 overflow-hidden dark">
-    <!-- Chat Area (80%) -->
-    <main class="w-[80%] h-full flex flex-col border-r border-gray-700 bg-gray-900 overflow-y-auto">
-      <header class="p-4 border-b border-gray-700 bg-gray-800 shrink-0 flex items-center justify-between">
-        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400">
-          OmniStreamBot Unified Chat
+    
+    <!-- LEFT 20%: Chat Header & Messages -->
+    <aside class="w-[20%] h-full flex flex-col border-r border-gray-700 bg-gray-900 overflow-y-auto shadow-2xl relative z-10">
+      <header class="p-3 border-b border-gray-700 bg-gray-800 shrink-0 flex items-center justify-between">
+        <h1 class="text-md font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-green-400">
+          Chat
         </h1>
-        <div class="flex items-center gap-4">
-          <button 
-            @click="copyIPAddress" 
-            class="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition-colors"
-            title="Copy local IP for OBS"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-            {{ ipCopied ? localIP : 'Copy IP' }}
-          </button>
-          <button 
-            @click="copyOverlayLink" 
-            class="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition-colors"
-            title="Copy overlay link for OBS"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            {{ overlayCopied ? 'Copied!' : 'Copy Overlay' }}
-          </button>
-          <div class="text-sm font-medium">
-            <span :class="twitch.isConnected.value ? 'text-green-400' : 'text-red-400'"><span class="w-2 h-2 inline-block rounded-full bg-current mr-1"></span> Twitch</span>
-            <span :class="kick.isConnected.value ? 'text-green-400 ml-2' : 'text-red-400 ml-2'"><span class="w-2 h-2 inline-block rounded-full bg-current mr-1"></span> Kick</span>
-          </div>
+        <div class="flex items-center gap-2 text-xs font-medium">
+          <span :class="twitch.isConnected.value ? 'text-green-400' : 'text-red-400'"><span class="w-1.5 h-1.5 inline-block rounded-full bg-current mr-1"></span> TW</span>
+          <span :class="kick.isConnected.value ? 'text-green-400' : 'text-red-400'"><span class="w-1.5 h-1.5 inline-block rounded-full bg-current mr-1"></span> K</span>
         </div>
       </header>
+
       <div 
         ref="chatContainer"
-        class="flex-1 p-4 overflow-y-auto flex flex-col gap-2 relative scroll-smooth"
+        class="flex-1 p-3 overflow-y-auto flex flex-col gap-2 relative scroll-smooth text-sm"
       >
-        <div v-if="messages.length === 0" class="text-gray-400 italic text-sm text-center mt-10">Chat messages will appear here...</div>
+        <div v-if="messages.length === 0" class="text-gray-400 italic text-xs text-center mt-10">Messages appear here...</div>
 
         <div 
           v-for="msg in messages" 
           :key="msg.id"
-          class="flex flex-col animate-fade-in p-2 rounded hover:bg-gray-800 transition-colors"
+          class="flex flex-col animate-fade-in p-1.5 rounded hover:bg-gray-800 transition-colors"
         >
-          <div class="flex items-center gap-2 mb-1">
+          <div class="flex items-center gap-1.5 mb-1">
             <span 
-              class="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+              class="text-[10px] font-bold uppercase tracking-wider px-1 py-0.5 rounded"
               :class="msg.platform === 'twitch' ? 'bg-purple-600/20 text-purple-400' : 'bg-green-600/20 text-green-400'"
             >
               {{ msg.platform }}
             </span>
             <span 
-              class="font-bold cursor-pointer hover:underline" 
+              class="font-bold cursor-pointer hover:underline text-xs" 
               :style="{ color: msg.color }"
               @click="showUserPopup($event, msg.username, msg.platform)"
             >
               {{ msg.username }}
             </span>
-            <span class="text-xs text-gray-500">{{ new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span>
           </div>
-          <div class="text-gray-100 text-sm leading-relaxed whitespace-pre-wrap break-words flex flex-wrap items-center gap-x-1.5 min-h-[24px]">
+          <div class="text-gray-100 text-xs leading-relaxed whitespace-pre-wrap break-words flex flex-wrap items-center gap-x-1 min-h-[20px]">
             <template v-for="(part, idx) in emotes.getMessageParts(msg)" :key="idx">
               <span v-if="part.type === 'text'">{{ part.content }}</span>
               <img 
@@ -64,12 +47,21 @@
                 :src="part.url" 
                 :alt="part.content" 
                 :title="part.content" 
-                class="h-6 w-auto inline-block object-contain"
+                class="h-5 w-auto inline-block object-contain"
               />
             </template>
           </div>
         </div>
       </div>
+    </aside>
+
+    <!-- MIDDLE 60%: Stream Studio -->
+    <main class="w-[60%] h-full flex flex-col bg-black">
+      <StreamStudio 
+        v-if="mounted" 
+        :twitch-key="settings.streamTwitchKey.value"
+        :kick-key="settings.streamKickKey.value"
+      />
 
       <!-- User Action Popup -->
       <div 
@@ -121,29 +113,45 @@
       </footer>
     </main>
 
-    <!-- Sidebar Area (20%) -->
-    <aside class="w-[20%] h-full bg-gray-800 p-6 flex flex-col overflow-y-auto shadow-xl">
-      <h2 class="text-lg font-semibold mb-6 flex items-center gap-2">
+      <!-- RIGHT 20%: Settings -->
+    <aside class="w-[20%] h-full bg-gray-800 p-4 flex flex-col overflow-y-auto shadow-xl z-10">
+      <h2 class="text-md font-semibold mb-4 flex items-center gap-2">
         <span class="text-gray-400">⚙️</span> Settings
       </h2>
       
-      <div class="space-y-6 flex-1">
-        <div class="space-y-2">
-          <div class="flex justify-between items-center">
-             <label class="block text-sm font-medium text-gray-300">Twitch Username</label>
-             <button @click="twitch.connect()" v-if="settings.twitchUsername.value && !twitch.isConnected.value" class="text-xs text-purple-400 hover:text-purple-300">Connect</button>
-             <button @click="twitch.disconnect()" v-else-if="twitch.isConnected.value" class="text-xs text-gray-400 hover:text-red-400">Disconnect</button>
+      <div class="space-y-5 flex-1">
+        <!-- Streaming Engine Keys -->
+        <div class="space-y-3 pb-3 border-b border-gray-700">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Stream Output</h3>
+          <div class="space-y-1">
+             <label class="block text-xs font-medium text-gray-300">Twitch Stream Key</label>
+             <input v-model="settings.streamTwitchKey.value" type="password" class="w-full bg-gray-700 border border-gray-600 rounded p-1.5 text-white text-xs focus:outline-none focus:border-purple-500" placeholder="live_..." />
           </div>
-          <input v-model="settings.twitchUsername.value" type="text" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-purple-500 transition-colors" placeholder="e.g. xqc" />
+          <div class="space-y-1">
+             <label class="block text-xs font-medium text-gray-300">Kick Stream Key</label>
+             <input v-model="settings.streamKickKey.value" type="password" class="w-full bg-gray-700 border border-gray-600 rounded p-1.5 text-white text-xs focus:outline-none focus:border-green-500" placeholder="sk_..." />
+          </div>
         </div>
 
-        <div class="space-y-2">
-          <div class="flex justify-between items-center">
-             <label class="block text-sm font-medium text-gray-300">Kick Username</label>
-             <button @click="kick.connect()" v-if="settings.kickUsername.value && !kick.isConnected.value" class="text-xs text-green-400 hover:text-green-300">Connect</button>
-             <button @click="kick.disconnect()" v-else-if="kick.isConnected.value" class="text-xs text-gray-400 hover:text-red-400">Disconnect</button>
+        <!-- Chat Logins -->
+        <div class="space-y-3 pb-3 border-b border-gray-700">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Chat Ingest</h3>
+          <div class="space-y-1">
+            <div class="flex justify-between items-center">
+               <label class="block text-xs font-medium text-gray-300">Twitch Username</label>
+               <button @click="twitch.connect()" v-if="settings.twitchUsername.value && !twitch.isConnected.value" class="text-[10px] text-purple-400 hover:text-purple-300">Connect</button>
+               <button @click="twitch.disconnect()" v-else-if="twitch.isConnected.value" class="text-[10px] text-gray-400 hover:text-red-400">Disconnect</button>
+            </div>
+            <input v-model="settings.twitchUsername.value" type="text" class="w-full bg-gray-700 border border-gray-600 rounded p-1.5 text-white text-xs" />
           </div>
-          <input v-model="settings.kickUsername.value" type="text" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-green-500 transition-colors" placeholder="e.g. adinross" />
+          <div class="space-y-1">
+            <div class="flex justify-between items-center">
+               <label class="block text-xs font-medium text-gray-300">Kick Username</label>
+               <button @click="kick.connect()" v-if="settings.kickUsername.value && !kick.isConnected.value" class="text-[10px] text-green-400 hover:text-green-300">Connect</button>
+               <button @click="kick.disconnect()" v-else-if="kick.isConnected.value" class="text-[10px] text-gray-400 hover:text-red-400">Disconnect</button>
+            </div>
+            <input v-model="settings.kickUsername.value" type="text" class="w-full bg-gray-700 border border-gray-600 rounded p-1.5 text-white text-xs" />
+          </div>
         </div>
 
         <div class="space-y-4 pt-4 border-t border-gray-700">
@@ -327,6 +335,8 @@ import { useKickChat } from '~/composables/useKickChat';
 import { useSystemInfo } from '~/composables/useSystemInfo';
 import { useEmotes } from '~/composables/useEmotes';
 
+import StreamStudio from '~/components/StreamStudio.vue';
+
 const settings = useSettings();
 const tts = useTTS();
 const sys = useSystemInfo();
@@ -338,6 +348,7 @@ const newPlatform = ref<'twitch' | 'kick'>('twitch');
 const overlayCopied = ref(false);
 const ipCopied = ref(false);
 const localIP = ref('');
+const mounted = ref(false);
 
 const activeUserPopup = ref<{
   username: string;
@@ -494,6 +505,7 @@ const twitch = useTwitchChat(handleMessage);
 const kick = useKickChat(handleMessage);
 
 onMounted(() => {
+  mounted.value = true;
   // Enforce dark mode on body element just in case
   document.documentElement.classList.add('dark');
 

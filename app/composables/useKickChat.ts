@@ -19,6 +19,13 @@ export const useKickChat = (onMessage: (msg: ChatMessage) => void) => {
         try {
             // Fetch Chatroom ID via our server API (which uses allorigins proxy)
             const res = await fetch(`/api/kick/${channel}`);
+
+            if (res.status === 403) {
+                console.error('[Kick] Access blocked by Cloudflare. Please visit https://kick.com in your browser and solve the captcha to unblock.');
+                alert('Kick connection blocked by Cloudflare. Please visit kick.com in your browser, solve the captcha, and try again.');
+                return;
+            }
+
             if (!res.ok) {
                 console.error('[Kick] Failed to get chatroom ID, status:', res.status);
                 return;

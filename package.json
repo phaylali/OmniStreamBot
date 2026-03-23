@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
     "@mintplex-labs/piper-tts-web": "^1.0.4",
     "google-translate-api-x": "^10.7.2",
     "kokoro-js": "^1.2.1",

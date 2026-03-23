@@ -5,47 +5,35 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 400, message: 'Channel is required' });
     }
 
-    const proxies = [
-        `https://api.allorigins.win/get?url=${encodeURIComponent(`https://kick.com/api/v1/channels/${channel}`)}`,
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://kick.com/api/v1/channels/${channel}`)}`,
-    ];
+    try {
+        console.log(`[Kick API] Redirecting to local Python bridge for ${channel}`);
+        // Fetch from our specialized Python bridge that handles Cloudflare
+        const response = await fetch(`http://localhost:3003/chatroom/${channel}`);
 
-    let lastError: any = null;
-
-    for (const proxyUrl of proxies) {
-        try {
-            const response = await fetch(proxyUrl, {
-                headers: {
-                    'Accept': 'application/json',
-                }
+        if (response.status === 403) {
+            throw createError({
+                statusCode: 403,
+                message: 'Kick connection blocked by Cloudflare. Please solve the captcha in your browser at kick.com first.'
             });
-
-            if (!response.ok) {
-                continue;
-            }
-
-            const wrapper = await response.json();
-            
-            if (!wrapper.contents) {
-                continue;
-            }
-            
-            const data = JSON.parse(wrapper.contents);
-            
-            if (!data.chatroom?.id) {
-                throw createError({ statusCode: 404, message: 'Channel not found or has no chatroom' });
-            }
-            
-            return {
-                chatroomId: data.chatroom.id
-            };
-        } catch (error: any) {
-            lastError = error;
-            console.log('[Kick API] Proxy failed, trying next...');
-            continue;
         }
-    }
 
-    console.error('[Kick API] All proxies failed:', lastError);
-    throw createError({ statusCode: 500, message: lastError?.message || 'Failed to fetch channel info from all proxies' });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+            throw createError({
+                statusCode: response.status,
+                message: errorData.detail || 'Failed to fetch from Kick bridge'
+            });
+        }
+
+        const data = await response.json();
+        return {
+            chatroomId: data.chatroomId
+        };
+    } catch (error: any) {
+        console.error('[Kick API] Local bridge failed:', error);
+        throw createError({
+            statusCode: error.statusCode || 500,
+            message: error.message || 'Failed to connect to Kick bridge service'
+        });
+    }
 });

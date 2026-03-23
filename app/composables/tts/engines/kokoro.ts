@@ -14,6 +14,7 @@ export const createKokoroEngine = (
     const voices = ref<Record<string, TTSVoice>>({});
 
     let currentAudio: HTMLAudioElement | null = null;
+    let singleLock: Promise<void> = Promise.resolve();
 
     const init = async () => {
         if (typeof window === 'undefined') return;
@@ -73,7 +74,13 @@ export const createKokoroEngine = (
             return;
         }
 
+        const previousLock = singleLock;
+        let resolveLock: () => void;
+        singleLock = new Promise<void>((res) => { resolveLock = res; });
+
         return new Promise<void>(async (resolve) => {
+            await previousLock;
+
             try {
                 const audioResult = await kokoroInstance!.generate(text, {
                     voice: getVoice() || 'af_sarah',
@@ -90,26 +97,35 @@ export const createKokoroEngine = (
                 currentAudio = new Audio(url);
                 currentAudio.volume = getVolume();
 
-                await currentAudio.play();
-
                 currentAudio.onended = () => {
                     if (currentAudio) {
                         URL.revokeObjectURL(currentAudio.src);
+                        currentAudio.remove(); // Remove from DOM
                         currentAudio = null;
                     }
                     resolve();
+                    resolveLock();
                 };
 
                 currentAudio.onerror = () => {
                     if (currentAudio) {
                         URL.revokeObjectURL(currentAudio.src);
+                        currentAudio.remove(); // Remove from DOM
                         currentAudio = null;
                     }
                     resolve();
+                    resolveLock();
                 };
+
+                // Append to DOM to prevent aggressive GC/optimization
+                currentAudio.style.display = 'none';
+                document.body.appendChild(currentAudio);
+
+                await currentAudio.play();
             } catch (e: any) {
                 console.error('[TTS Kokoro] Speak error:', e);
                 resolve();
+                resolveLock();
             }
         });
     };

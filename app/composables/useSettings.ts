@@ -9,6 +9,8 @@ export interface ListEntry {
 
 const twitchUsername = ref('');
 const kickUsername = ref('');
+const streamTwitchKey = ref('');
+const streamKickKey = ref('');
 const ttsEnabled = ref(true);
 const selectedVoice = ref('af_sarah');
 const ttsVolume = ref(1.0);
@@ -36,6 +38,8 @@ export const useSettings = () => {
                 const parsed = JSON.parse(saved);
                 if (parsed.twitchUsername) twitchUsername.value = parsed.twitchUsername;
                 if (parsed.kickUsername) kickUsername.value = parsed.kickUsername;
+                if (parsed.streamTwitchKey) streamTwitchKey.value = parsed.streamTwitchKey;
+                if (parsed.streamKickKey) streamKickKey.value = parsed.streamKickKey;
                 if (parsed.ttsEnabled !== undefined) ttsEnabled.value = parsed.ttsEnabled;
                 if (parsed.selectedVoice) selectedVoice.value = parsed.selectedVoice;
                 if (parsed.ttsVolume !== undefined) ttsVolume.value = parsed.ttsVolume;
@@ -53,10 +57,12 @@ export const useSettings = () => {
         }
 
         // Auto-save on changes
-        watch([twitchUsername, kickUsername, ttsEnabled, selectedVoice, ttsVolume, ttsEngine, browserVoice, ttsRate, ttsPitch, blocklist, allowlist, blocklistEnabled, allowlistEnabled], () => {
+        watch([twitchUsername, kickUsername, streamTwitchKey, streamKickKey, ttsEnabled, selectedVoice, ttsVolume, ttsEngine, browserVoice, ttsRate, ttsPitch, blocklist, allowlist, blocklistEnabled, allowlistEnabled], () => {
             localStorage.setItem('omnistreambot-settings', JSON.stringify({
                 twitchUsername: twitchUsername.value,
                 kickUsername: kickUsername.value,
+                streamTwitchKey: streamTwitchKey.value,
+                streamKickKey: streamKickKey.value,
                 ttsEnabled: ttsEnabled.value,
                 selectedVoice: selectedVoice.value,
                 ttsVolume: ttsVolume.value,
@@ -75,6 +81,8 @@ export const useSettings = () => {
     return {
         twitchUsername,
         kickUsername,
+        streamTwitchKey,
+        streamKickKey,
         ttsEnabled,
         selectedVoice,
         ttsVolume,

@@ -9,6 +9,9 @@ let kokoroEngine: TTSEngineInterface | null = null;
 let serverPiperEngine: TTSEngineInterface | null = null;
 let currentEngine: TTSEngineInterface | null = null;
 
+const messageQueue: string[] = [];
+let isProcessingQueue = false;
+
 export interface TTSSettings {
     ttsEnabled: { value: boolean };
     ttsEngine: { value: TTSEngine };
@@ -40,9 +43,6 @@ export const createTTSFactory = (settings: TTSSettings): TTSFactory => {
     const engineError = ref<string | null>(null);
     const voices = ref<Record<string, TTSVoice>>({});
     const currentEngineName = ref<TTSEngine>(settings.ttsEngine.value);
-
-    const messageQueue: string[] = [];
-    let isProcessingQueue = false;
 
     const getVolume = () => settings.ttsVolume.value;
     const getKokoroVoice = () => settings.selectedVoice.value;

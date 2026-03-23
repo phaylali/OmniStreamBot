@@ -26,7 +26,7 @@ fi
 if [ ! -d ".venv" ]; then
     echo -e "${YELLOW}[1/6] Setting up Python virtual environment...${NC}"
     python3 -m venv .venv
-    .venv/bin/pip install fastapi uvicorn pydantic piper-tts
+    .venv/bin/pip install fastapi uvicorn pydantic piper-tts kickapi cloudscraper ua-generator
     echo -e "${GREEN}Virtual environment ready${NC}"
 else
     echo -e "${GREEN}[1/6] Python virtual environment already exists${NC}"
@@ -55,6 +55,16 @@ if lsof -ti:3000 >/dev/null 2>&1; then
     kill $(lsof -ti:3000) 2>/dev/null || true
     sleep 1
 fi
+if lsof -ti:3003 >/dev/null 2>&1; then
+    echo "Killing existing process on port 3003..."
+    kill $(lsof -ti:3003) 2>/dev/null || true
+    sleep 1
+fi
+if lsof -ti:3006 >/dev/null 2>&1; then
+    echo "Killing existing process on port 3006..."
+    kill $(lsof -ti:3006) 2>/dev/null || true
+    sleep 1
+fi
 
 # Start TTS server
 echo -e "${YELLOW}[4/6] Starting TTS server...${NC}"
@@ -62,19 +72,35 @@ echo -e "${YELLOW}[4/6] Starting TTS server...${NC}"
 TTS_PID=$!
 echo "TTS server started (PID: $TTS_PID)"
 
-# Wait for TTS server to start
+# Start Kick Bridge service
+echo -e "${YELLOW}[5/7] Starting Kick Bridge service...${NC}"
+.venv/bin/python kick_service.py &
+KICK_PID=$!
+echo "Kick Bridge service started (PID: $KICK_PID)"
+
+# Start C++ Stream Engine
+echo -e "${YELLOW}[6/7] Starting C++ Stream Engine...${NC}"
+./stream_engine/build/omnistream_engine &
+ENGINE_PID=$!
+echo "C++ Stream Engine started (PID: $ENGINE_PID)"
+
+# Wait for servers to start
 sleep 2
 
-# Check if TTS server is running
+# Check servers
 if curl -s http://localhost:3002/health >/dev/null 2>&1; then
     echo -e "${GREEN}TTS server is running on port 3002${NC}"
-else
-    echo -e "${YELLOW}Warning: TTS server may not have started properly${NC}"
-    echo "Check that the virtual environment is working."
+fi
+if curl -s http://localhost:3003/docs >/dev/null 2>&1; then
+    echo -e "${GREEN}Kick Bridge is running on port 3003${NC}"
+fi
+# Note: C++ engine doesn't have a health endpoint, just check if PID is alive
+if kill -0 $ENGINE_PID 2>/dev/null; then
+    echo -e "${GREEN}C++ Stream Engine is running on port 3006${NC}"
 fi
 
 # Start Nuxt app
-echo -e "${YELLOW}[5/6] Starting Nuxt app...${NC}"
+echo -e "${YELLOW}[7/7] Starting Nuxt app...${NC}"
 echo ""
 echo "=========================================="
 echo "  OmniStream is ready!"
@@ -90,3 +116,5 @@ bun run dev
 echo ""
 echo "Shutting down..."
 kill $TTS_PID 2>/dev/null || true
+kill $KICK_PID 2>/dev/null || true
+kill $ENGINE_PID 2>/dev/null || true
