@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Omniversify Studio</title>
+  <style>
+    :root {
+      --bg-dark: #09090b;
+      --bg-card: #18181b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #27272a;
+      --twitch: #9146ff;
+      --kick: #53fc18;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: var(--bg-dark); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; }
+    
+    #app { display: flex; flex-direction: column; height: 100%; }
+    
+    header { 
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 24px; height: 64px; background: var(--bg-card); 
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .logo { font-size: 20px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
+    
+    .tabs { display: flex; gap: 8px; }
+    .tab { 
+      padding: 8px 16px; background: transparent; border: none; 
+      color: var(--text-muted); cursor: pointer; border-radius: 8px; 
+      font-size: 14px; font-weight: 600; transition: all 0.2s;
+    }
+    .tab:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .tab.active { background: var(--accent); color: white; }
+    
+    #main { flex: 1; display: flex; min-height: 0; }
+    .panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    
+    .bar { 
+      display: flex; align-items: center; gap: 12px; padding: 12px 24px; 
+      background: var(--bg-card); border-bottom: 1px solid var(--border);
+    }
+    
+    input, select { 
+      background: #0f172a; border: 1px solid var(--border); color: var(--text); 
+      padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--accent); }
+    
+    .btn { 
+      padding: 8px 16px; border: none; border-radius: 8px; font-size: 13px; 
+      font-weight: 600; cursor: pointer; background: var(--accent); color: white;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    
+    #chat-container { flex: 1; min-height: 0; overflow: hidden; background: var(--bg-dark); }
+    #chat { height: 100%; overflow-y: auto; padding: 20px; scroll-behavior: smooth; }
+    
+    /* Custom Scrollbar */
+    #chat::-webkit-scrollbar { width: 6px; }
+    #chat::-webkit-scrollbar-track { background: transparent; }
+    #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    
+    .msg { 
+      padding: 8px 12px; border-radius: 6px; margin-bottom: 4px;
+      transition: background 0.1s; display: flex; align-items: center; gap: 10px;
+      cursor: pointer;
+    }
+    .msg:hover { background: rgba(255,255,255,0.03); }
+    
+    .plat { 
+      font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; 
+      text-transform: uppercase; min-width: 50px; text-align: center;
+    }
+    .twitch { background: var(--twitch); color: white; }
+    .kick { background: var(--kick); color: black; }
+    
+    .user { font-weight: 700; color: var(--accent); }
+    
+    #lists-panel { 
+      display: none; background: var(--bg-card); padding: 20px 24px; 
+      border-bottom: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    #lists-panel h4 { font-size: 14px; margin-bottom: 12px; color: var(--text-muted); }
+    #lists-panel .col { flex: 1; min-width: 0; }
+    #lists-panel .row { display: flex; gap: 8px; margin-bottom: 12px; }
+    #lists-panel .items { max-height: 140px; overflow-y: auto; font-size: 12px; border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
+    
+    #stream-panel { display: none; padding: 32px; flex-direction: column; align-items: center; }
+    #stream-panel.active { display: flex; }
+    
+    #stream-canvas { 
+      width: 100%; max-width: 1080px; aspect-ratio: 16/9; 
+      background: #000; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      border: 1px solid var(--border);
+    }
+    
+    .live-status {
+      display: flex; align-items: center; gap: 10px; margin-top: 24px;
+    }
+    
+    .dot { width: 10px; height: 10px; background: #64748b; border-radius: 50%; }
+    .dot.live { background: #ef4444; box-shadow: 0 0 10px #ef4444; animation: pulse 1.5s infinite; }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    .btn.live { background: #ef4444; }
+    .btn.live:hover { background: #dc2626; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="logo">Omniversify Studio</div>
+      <div class="tabs">
+        <button class="tab active" data-tab="chat">Chat Monitor</button>
+        <button class="tab" data-tab="stream">Stream Deck</button>
+      </div>
+    </header>
+    
+    <div id="main">
+      <div class="panel" id="chat-panel">
+        <div class="bar">
+          <input type="text" id="tw" placeholder="Twitch Channel" style="width: 140px;">
+          <input type="text" id="kw" placeholder="Kick Channel" style="width: 140px;">
+          <div style="width: 1px; height: 24px; background: var(--border); margin: 0 8px;"></div>
+          <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted); cursor:pointer;">
+            <input type="checkbox" id="tts-en"> TTS
+          </label>
+          <select id="tts-eng" style="width: 130px;">
+            <option value="server">Server (Piper)</option>
+            <option value="lux">LuxTTS (Fast)</option>
+            <option value="soprano">Soprano (GPU)</option>
+            <option value="browser">Browser</option>
+          </select>
+          <button class="btn" id="tts-test" style="background:#334155; padding: 6px 12px;">Test</button>
+          <span style="flex:1"></span>
+          <button class="btn" id="show-lists" style="background:transparent; border:1px solid var(--border); color:var(--text-muted);">Whitelist/Blacklist</button>
+        </div>
+        
+        <div id="lists-panel">
+          <div style="display: flex; gap: 32px;">
+            <div class="col">
+              <h4>Blocklist <span id="bcnt">(0)</span> <label style="margin-left:8px;font-size:12px;font-weight:normal;"><input type="checkbox" id="bl-en"> Enable</label></h4>
+              <div class="row">
+                <input type="text" id="bl-in" placeholder="Username" style="flex:1;">
+                <select id="bl-pl" style="width:90px;">
+                  <option value="twitch">Twitch</option>
+                  <option value="kick">Kick</option>
+                </select>
+                <button class="btn" id="bl-add">Add</button>
+              </div>
+              <div class="items" id="bl-items"></div>
+            </div>
+            <div class="col">
+              <h4>Allowlist <span id="acnt">(0)</span> <label style="margin-left:8px;font-size:12px;font-weight:normal;"><input type="checkbox" id="al-en"> Enable</label></h4>
+              <div class="row">
+                <input type="text" id="al-in" placeholder="Username" style="flex:1;">
+                <select id="al-pl" style="width:90px;">
+                  <option value="twitch">Twitch</option>
+                  <option value="kick">Kick</option>
+                </select>
+                <button class="btn" id="al-add">Add</button>
+              </div>
+              <div class="items" id="al-items"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="chat-container">
+          <div id="chat"></div>
+        </div>
+      </div>
+      
+      <div class="panel" id="stream-panel">
+        <canvas id="stream-canvas" width="960" height="540"></canvas>
+        <div class="live-status">
+          <div class="dot" id="live-dot"></div>
+          <span id="live-txt" style="font-size:14px; font-weight:700; color:var(--text-muted);">OFFLINE</span>
+        </div>
+        <div style="margin-top: 20px;">
+           <button class="btn" id="start-stream" style="padding: 12px 32px; font-size: 16px;">Go Live</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="log-overlay" style="display:none;position:fixed;bottom:0;left:0;right:0;height:250px;background:rgba(0,0,0,0.9);color:#10b981;font-family:monospace;font-size:12px;padding:12px;overflow-y:auto;z-index:9999;border-top:2px solid var(--accent); white-space: pre-wrap;">
+    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #333;margin-bottom:8px;padding-bottom:4px;">
+        <span>Runtime Logs (Ctrl+L to hide)</span>
+        <button onclick="document.getElementById('log-overlay').innerHTML=''" style="background:none;border:none;color:#ef4444;cursor:pointer;">Clear</button>
+    </div>
+    <div id="log-content"></div>
+  </div>
+  
+  <script>
+    // Console redirection to UI for debugging in Electrobun
+    (function() {
+      const content = document.getElementById('log-content');
+      const log = console.log;
+      const error = console.error;
+      const warn = console.warn;
+      
+      const addLog = (m, c) => {
+        const d = document.createElement('div');
+        d.style.color = c;
+        d.textContent = `[${new Date().toLocaleTimeString()}] ` + (typeof m === 'object' ? JSON.stringify(m) : m);
+        content.appendChild(d);
+        document.getElementById('log-overlay').scrollTop = document.getElementById('log-overlay').scrollHeight;
+      };
+      
+      console.log = function(...args) { log(...args); addLog(args.join(' '), '#e2e8f0'); };
+      console.error = function(...args) { error(...args); addLog(args.join(' '), '#ef4444'); };
+      console.warn = function(...args) { warn(...args); addLog(args.join(' '), '#fbbf24'); };
+      
+      window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'l') {
+          const ov = document.getElementById('log-overlay');
+          ov.style.display = ov.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+    })();
+  </script>
+  
+  <script src="index.js" type="module"></script>
+</body>
+</html>
